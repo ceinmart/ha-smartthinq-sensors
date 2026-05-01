@@ -131,6 +131,16 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         turn_off_fn=lambda x: x.device.set_mode_low_heating(False),
         turn_on_fn=lambda x: x.device.set_mode_low_heating(True),
     ),
+    # Version: 0.42.0-phase4; created: 2026-05-01 16:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.MODE_POWER_SAVE,
+        name="Power save",
+        icon="mdi:leaf",
+        entity_registry_enabled_default=False,
+        turn_off_fn=lambda x: x.device.set_mode_power_save(False),
+        turn_on_fn=lambda x: x.device.set_mode_power_save(True),
+        available_fn=lambda x: x.device.is_energy_saving_available,
+    ),
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.LIGHTING_DISPLAY,
         name="Display light",

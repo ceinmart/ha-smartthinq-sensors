@@ -47,11 +47,11 @@ change.
 
 | LG field | Known values | Probable function | LG manual correspondence | Suggested Home Assistant entity | Confidence | Implementation status |
 |---|---|---|---|---|---|---|
-| `airState.miscFuncState.autoDry` | Likely `@ON` / `@OFF` or `1` / `0`; confirm exact enum per model | Keeps indoor unit dry after operation to reduce moisture | Auto clean / automatic drying | `switch.<device>_auto_dry` | High for schema; Medium for user-visible effect | Implemented in Phase 2; functional validation pending |
-| `airState.miscFuncState.Uvnano` | Likely `@ON` / `@OFF` or `1` / `0`; confirm exact enum per model | UVnano sterilization / fan cleaning feature | UVnano | `switch.<device>_uvnano` | High | Implemented in Phase 2; manual device/app validation pending |
-| `airState.miscFuncState.antiBugs` | Likely `@ON` / `@OFF` or `1` / `0`; confirm exact enum per model | Mosquito-repellent mode | Anti mosquito | `switch.<device>_anti_bugs` | High | Documented only; candidate for later phase |
-| `airState.wMode.lowHeating` | Likely `@ON` / `@OFF` or `1` / `0`; confirm exact enum per model | Low heating / minimum heat protection | Low heating | `switch.<device>_low_heating` | High | Documented only; candidate for later phase |
-| `airState.powerSave.basic` | Boolean or level; requires model validation | Power save / reduced consumption mode | Energy saving | `switch.<device>_power_save` if boolean; `select.<device>_energy_control` if level-based | High function match; Medium value model | Documented only |
+| `airState.miscFuncState.autoDry` plus `support.racMode` containing `@AUTODRY` | `@ON` / `@OFF`, `@STEP2`, `@STEP3`, `@AIAUTODRY` by model | Keeps indoor unit dry after operation to reduce moisture | Auto clean / automatic drying | `switch.<device>_auto_dry` | High when support marker exists | Implemented in Phase 2 with support-marker detection |
+| `airState.miscFuncState.Uvnano` plus `support.pacModeExt` containing `@UV_NANO` | `@ON` / `@OFF` | UVnano sterilization / fan cleaning feature | UVnano | `switch.<device>_uvnano` | High when support marker exists; low if using only the state field | Implemented in Phase 2 with support-marker detection |
+| `airState.miscFuncState.antiBugs` | Likely `@ON` / `@OFF` or `1` / `0`; support marker not confirmed | Mosquito-repellent mode | Anti mosquito | `switch.<device>_anti_bugs` | Medium/Low until support marker is found | Implemented in Phase 3 as disabled-by-default experimental switch |
+| `airState.wMode.lowHeating` | Likely `@ON` / `@OFF` or `1` / `0`; support marker not confirmed | Low heating / minimum heat protection | Low heating | `switch.<device>_low_heating` | Medium/Low until support marker is found | Implemented in Phase 3 as disabled-by-default experimental switch |
+| `airState.powerSave.basic` | Boolean or level; requires model validation | Power save / reduced consumption mode | Energy saving | `switch.<device>_power_save` if boolean | High function match; Medium value model | Implemented in Phase 4 as disabled-by-default switch when the model has an ON/OFF mapping |
 | `airState.bellSound.control` | Boolean or volume enum; requires model validation | Buzzer / button sound control | Sound / beep setting | `switch.<device>_sound` if on/off; `select.<device>_buzzer_volume` if volume enum | Medium | Documented only |
 
 ## Medium-priority candidates
@@ -77,7 +77,7 @@ simple energy saving from stepped energy control.
 
 | LG field | Known values | Probable function | LG manual correspondence | Suggested Home Assistant entity | Confidence | Implementation status |
 |---|---|---|---|---|---|---|
-| `activeEnergyControl` | Unknown; may be stepped percentages such as 20%, 40%, 60% depending on model | Active energy control level | Energy control | `select.<device>_energy_control` | Medium | Documented only |
+| `activeEnergyControl` | Unknown; may be stepped percentages such as 20%, 40%, 60% depending on model | Active energy control level | Energy control | `select.<device>_energy_control` | Medium | Implemented in Phase 4 as disabled-by-default select when model options are available |
 | `powerSave` | Unknown container or state, model dependent | Power save feature group | Energy saving | Depends on subfield; avoid direct entity until schema is confirmed | Medium | Documented only |
 | `energyDesiredCtrl` | Unknown command/control group | Energy target control | Energy monitoring / target usage | No direct entity until command semantics are confirmed | Low/Medium | Documented only |
 | `airState.energy.desiredDay` | Numeric energy target if present | Daily energy usage target | Energy target | `number.<device>_energy_target_day` | Medium | Documented only |
@@ -116,18 +116,28 @@ for compatibility while exposing additional variants.
 
 ## Phase 2 validation notes
 
-Phase 2 added switch entities for `Auto dry` and `UVnano` when the fields are
-reported by the device model/status.
+Phase 2 added switch entities for `Auto dry` and `UVnano`. A later comparison of
+four AC diagnostics showed that state fields under `airState.*` can be generic
+schema entries rather than proof of physical support, so support detection must
+prefer `support.*` markers.
 
-- `Auto dry`: entity appears in Home Assistant and accepts commands. There is
-  no known visible reference in the LG ThinQ app or on the physical unit for the
-  tested device, so functional effect remains unconfirmed. The state appears to
-  be automatically disabled when the AC is turned off; this may be normal
-  firmware behavior, or it may indicate the field is active only while the unit
-  is running.
-- `UVnano`: implemented as a switch using the model/status field. Physical/app
-  confirmation still needs to be recorded after testing on a device that exposes
-  a visible UVnano indicator or app control.
+- `Auto dry`: use `support.racMode` containing `@AUTODRY` as the support marker.
+  In the reviewed diagnostics, all four ACs exposed this marker.
+- `UVnano`: use `support.pacModeExt` containing `@UV_NANO` as the support marker.
+  In the reviewed diagnostics, only the known UVnano-capable AC exposed this
+  marker. The `airState.miscFuncState.Uvnano` field existed in all four schemas,
+  so it must not be used by itself to create an enabled entity.
+
+## Phase 3 validation notes
+
+Phase 3 added `Anti bugs` and `Low heating` as experimental switches.
+
+- `Anti bugs`: `airState.miscFuncState.antiBugs` appears as a generic field, but
+  no reliable `support.*` marker has been identified yet.
+- `Low heating`: `airState.wMode.lowHeating` appears as a generic field, but no
+  reliable `support.*` marker has been identified yet.
+- Until a marker is found or physical/app testing confirms support, these
+  entities should remain disabled by default.
 
 ## Next steps
 
@@ -135,15 +145,21 @@ reported by the device model/status.
    while the AC is on, after turning it off, and after the next polling cycle.
 2. Compare the Home Assistant `Auto dry` state with any LG app behavior if a
    future app version or device model exposes the control.
-3. Validate `UVnano` on a real device with a known UVnano indicator or LG app
-   reference, confirming both command and state after polling.
-4. Keep Phase 3 limited to `AntiBugs` and `Low Heating` only after reviewing
-   the Phase 2 observations.
+3. For future features, compare at least one supported and one unsupported
+   device when possible, looking first at `support.*` capability fields.
+4. Find reliable support markers for `AntiBugs` and `Low Heating` before making
+   them enabled by default.
 
 ## Implementation guidance for future phases
 
 - Detect support dynamically from `model_info`, `available_features`, and/or
   current device status.
+- Do not treat `Value.airState.*` or `device_status` field existence as proof of
+  support by itself. These fields may be generic across model JSONs.
+- Prefer explicit capability markers under `support.*`; add small helper
+  properties in `wideq/devices/ac.py` when a marker is confirmed.
+- If a feature has only a generic state field and no confirmed marker, keep the
+  entity disabled by default or leave the feature documented as pending.
 - Add new AC feature keys to `AirConditionerFeatures` only when implementing
   behavior, not while documenting.
 - For on/off features, prefer `ThinQSwitchEntityDescription`.

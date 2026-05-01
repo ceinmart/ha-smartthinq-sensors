@@ -16,7 +16,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .wideq import WM_DEVICE_TYPES, DeviceType, MicroWaveFeatures
+from .wideq import (
+    WM_DEVICE_TYPES,
+    AirConditionerFeatures,
+    DeviceType,
+    MicroWaveFeatures,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,8 +73,21 @@ MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
         select_option_fn=lambda x, option: x.device.set_defrost_weight_unit(option),
     ),
 )
+# Version: 0.42.0-phase4; created: 2026-05-01 16:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
+AC_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
+    ThinQSelectEntityDescription(
+        key=AirConditionerFeatures.ENERGY_CONTROL,
+        name="Energy control",
+        icon="mdi:transmission-tower-export",
+        entity_registry_enabled_default=False,
+        options_fn=lambda x: x.device.energy_control_modes,
+        select_option_fn=lambda x, option: x.device.set_energy_control(option),
+        available_fn=lambda x: x.device.is_energy_saving_available,
+    ),
+)
 
 SELECT_ENTITIES = {
+    DeviceType.AC: AC_SELECT,
     DeviceType.MICROWAVE: MICROWAVE_SELECT,
     **{dev_type: WASH_DEV_SELECT for dev_type in WM_DEVICE_TYPES},
 }

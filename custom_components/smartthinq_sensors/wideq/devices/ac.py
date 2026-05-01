@@ -12,7 +12,7 @@ from ..core_exceptions import InvalidRequestError
 from ..core_util import TempUnitConversion
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
-from ..model_info import TYPE_BOOL, TYPE_RANGE
+from ..model_info import TYPE_BOOL, TYPE_ENUM, TYPE_RANGE
 
 AWHP_MODEL_TYPE = ["AWHP", "SAC_AWHP"]
 
@@ -73,6 +73,9 @@ STATE_WDIR_HSWING = ["WDirLeftRight", "airState.wDir.leftRight"]
 STATE_WDIR_VSWING = ["WDirUpDown", "airState.wDir.upDown"]
 STATE_DUCT_ZONE = ["ZoneControl", "airState.ductZone.state"]
 STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
+# Version: 0.42.0-phase4; created: 2026-05-01 16:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
+STATE_POWER_SAVE = ["PowerSave", "airState.powerSave.basic"]
+STATE_ACTIVE_ENERGY_CONTROL = ["ActiveEnergyControl", "activeEnergyControl"]
 STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 # Version: 0.42.0-phase3; created: 2026-04-30 22:33 -03:00; author: Codex; project: ha-smartthinq-sensors.
@@ -111,6 +114,8 @@ CMD_STATE_WDIR_VSTEP = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSTEP]
 CMD_STATE_WDIR_HSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_HSWING]
 CMD_STATE_WDIR_VSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSWING]
 CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.control"]]
+CMD_STATE_POWER_SAVE = [CTRL_BASIC, "Set", STATE_POWER_SAVE]
+CMD_STATE_ACTIVE_ENERGY_CONTROL = [CTRL_BASIC, "Set", STATE_ACTIVE_ENERGY_CONTROL]
 CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
 CMD_STATE_MODE_ANTI_BUGS = [CTRL_BASIC, "Set", STATE_MODE_ANTI_BUGS]
 CMD_STATE_MODE_AUTO_DRY = [CTRL_BASIC, "Set", STATE_MODE_AUTO_DRY]
@@ -615,6 +620,59 @@ class AirConditionerDevice(Device):
         """Return if UVnano mode is supported."""
         return self._is_mode_supported(SUPPORT_UVNANO)
 
+    # Version: 0.42.0-phase4; created: 2026-05-01 16:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    def _is_on_off_state_supported(self, state_key: list[str]) -> bool:
+        """Return if a state field has a model-backed ON/OFF mapping."""
+        key = self._get_state_key(state_key)
+        if self.model_info.value_type(key) == TYPE_BOOL:
+            return True
+
+        has_on = any(
+            self.model_info.enum_value(key, mode) is not None
+            for mode in MODE_ON_VALUES
+        )
+        has_off = any(
+            self.model_info.enum_value(key, mode) is not None
+            for mode in MODE_OFF_VALUES
+        )
+        return has_on and has_off
+
+    @cached_property
+    def is_mode_power_save_supported(self):
+        """Return if Power Save mode has a model-backed ON/OFF mapping."""
+        return self._is_on_off_state_supported(STATE_POWER_SAVE)
+
+    @cached_property
+    def energy_control_modes(self) -> list[str]:
+        """Return available Active Energy Control options."""
+        key = self._get_state_key(STATE_ACTIVE_ENERGY_CONTROL)
+        value_type = self.model_info.value_type(key)
+        if value_type == TYPE_ENUM:
+            if not (values := self.model_info.value(key, [TYPE_ENUM])):
+                return []
+            return [
+                str(value)
+                for value in dict.fromkeys(values.options.values())
+                if value not in (None, "")
+            ]
+        if value_type == TYPE_RANGE:
+            if not (values := self.model_info.value(key, [TYPE_RANGE])):
+                return []
+            if values.step < 1:
+                return []
+            return [
+                str(value)
+                for value in range(values.min, values.max + 1, values.step)
+            ]
+        return []
+
+    @property
+    def is_energy_saving_available(self):
+        """Return if energy-saving controls are available for the current state."""
+        if not self._status or not self._status.is_on:
+            return False
+        return self._status.operation_mode == ACMode.COOL.name
+
     @cached_property
     def supported_ligth_modes(self):
         """Return light switch modes supported."""
@@ -822,6 +880,35 @@ class AirConditionerDevice(Device):
         if (mode := self._get_on_off_mode_value(keys[2], status)) is None:
             raise ValueError("UVnano mode not supported")
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
+    # Version: 0.42.0-phase4; created: 2026-05-01 16:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    async def set_mode_power_save(self, status: bool):
+        """Set the Power Save mode on or off."""
+        if not self.is_mode_power_save_supported:
+            raise ValueError("Power Save mode not supported")
+        if not self.is_energy_saving_available:
+            raise ValueError("Power Save mode is not available")
+        keys = self._get_cmd_keys(CMD_STATE_POWER_SAVE)
+        if (mode := self._get_on_off_mode_value(keys[2], status)) is None:
+            raise ValueError("Power Save mode not supported")
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
+    async def set_energy_control(self, mode: str):
+        """Set the Active Energy Control mode."""
+        if mode not in self.energy_control_modes:
+            raise ValueError(f"Invalid energy control mode: {mode}")
+        if not self.is_energy_saving_available:
+            raise ValueError("Energy Control mode is not available")
+
+        keys = self._get_cmd_keys(CMD_STATE_ACTIVE_ENERGY_CONTROL)
+        key = keys[2]
+        if self.model_info.value_type(key) == TYPE_ENUM:
+            value = self.model_info.enum_value(key, mode)
+            if value is None:
+                raise ValueError(f"Invalid energy control mode: {mode}")
+        else:
+            value = mode
+        await self.set(keys[0], keys[1], key=key, value=value)
 
     async def set_mode_jet(self, status: bool):
         """Set the Jet mode on or off."""
@@ -1236,6 +1323,31 @@ class AirConditionerStatus(DeviceStatus):
             value = 5
         return self._update_feature(AirConditionerFeatures.ENERGY_CURRENT, value, False)
 
+    # Version: 0.42.0-phase4; created: 2026-05-01 16:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    @property
+    def mode_power_save(self):
+        """Return Power Save mode status."""
+        if not self._device.is_mode_power_save_supported:
+            return None
+        if (status := self._lookup_on_off_mode(STATE_POWER_SAVE)) is None:
+            return None
+        return self._update_feature(
+            AirConditionerFeatures.MODE_POWER_SAVE, status, False
+        )
+
+    @property
+    def energy_control(self):
+        """Return Active Energy Control mode."""
+        if not self._device.energy_control_modes:
+            return None
+        if (status := self._lookup_enum_or_range(STATE_ACTIVE_ENERGY_CONTROL)) is None:
+            return None
+        if status not in self._device.energy_control_modes:
+            return None
+        return self._update_feature(
+            AirConditionerFeatures.ENERGY_CONTROL, status, False
+        )
+
     @property
     def humidity(self):
         """Return current humidity."""
@@ -1345,6 +1457,24 @@ class AirConditionerStatus(DeviceStatus):
         if value in MODE_OFF_VALUES:
             return False
         return False
+
+    # Version: 0.42.0-phase4; created: 2026-05-01 16:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    def _lookup_enum_or_range(self, state_key: list[str]) -> str | None:
+        """Return a model-backed enum or range status."""
+        key = self._get_state_key(state_key)
+        value_type = self._device.model_info.value_type(key)
+        if value_type == TYPE_ENUM:
+            try:
+                value = self.lookup_enum(key, True)
+            except (TypeError, ValueError):
+                value = self.lookup_enum(key)
+            if value:
+                return str(value)
+        if value_type == TYPE_RANGE:
+            value = self.lookup_range(key)
+            if value is not None:
+                return str(value)
+        return None
 
     @property
     def filters_life(self):
@@ -1523,6 +1653,8 @@ class AirConditionerStatus(DeviceStatus):
         _ = [
             self.room_temp,
             self.energy_current,
+            self.mode_power_save,
+            self.energy_control,
             self.filters_life,
             self.humidity,
             self.pm10,

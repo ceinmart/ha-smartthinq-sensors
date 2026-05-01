@@ -31,6 +31,8 @@ class StateOptions(StrEnum):
 class AirConditionerFeatures(StrEnum):
     """Features for LG Air Conditioner devices."""
 
+    # Version: 0.42.0-phase4; created: 2026-05-01 16:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    ENERGY_CONTROL = "energy_control"
     ENERGY_CURRENT = "energy_current"
     HOT_WATER_TEMP = "hot_water_temperature"
     HUMIDITY = "humidity"
@@ -46,6 +48,7 @@ class AirConditionerFeatures(StrEnum):
     MODE_AWHP_SILENT = "mode_awhp_silent"
     MODE_JET = "mode_jet"
     MODE_LOW_HEATING = "mode_low_heating"
+    MODE_POWER_SAVE = "mode_power_save"
     MODE_UVNANO = "mode_uvnano"
     PM1 = "pm1"
     PM10 = "pm10"
