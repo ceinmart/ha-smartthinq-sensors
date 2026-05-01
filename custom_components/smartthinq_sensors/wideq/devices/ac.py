@@ -6,13 +6,13 @@ from enum import Enum
 import logging
 
 from ..backports.functools import cached_property
-from ..const import AirConditionerFeatures, TemperatureUnit
+from ..const import BIT_OFF, BIT_ON, AirConditionerFeatures, TemperatureUnit
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidRequestError
 from ..core_util import TempUnitConversion
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
-from ..model_info import TYPE_RANGE
+from ..model_info import TYPE_BOOL, TYPE_RANGE
 
 AWHP_MODEL_TYPE = ["AWHP", "SAC_AWHP"]
 
@@ -72,7 +72,10 @@ STATE_DUCT_ZONE = ["ZoneControl", "airState.ductZone.state"]
 STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
+# Version: 0.42.0-phase2; created: 2026-04-30 21:58 -03:00; author: Codex; project: ha-smartthinq-sensors.
+STATE_MODE_AUTO_DRY = ["AutoDry", "airState.miscFuncState.autoDry"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
+STATE_MODE_UVNANO = ["Uvnano", "airState.miscFuncState.Uvnano"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
 STATE_AIRSENSORMON = ["SensorMon", "airState.quality.sensorMon"]
 STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
@@ -103,7 +106,9 @@ CMD_STATE_WDIR_HSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_HSWING]
 CMD_STATE_WDIR_VSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSWING]
 CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.control"]]
 CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
+CMD_STATE_MODE_AUTO_DRY = [CTRL_BASIC, "Set", STATE_MODE_AUTO_DRY]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
+CMD_STATE_MODE_UVNANO = [CTRL_BASIC, "Set", STATE_MODE_UVNANO]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
 
@@ -148,6 +153,8 @@ LIGHT_DISPLAY_INV_ON = ["@RAC_LED_OFF", "@AC_LED_ON_W"]
 
 MODE_OFF = "@OFF"
 MODE_ON = "@ON"
+MODE_OFF_VALUES = (MODE_OFF, BIT_OFF, "0", 0, False)
+MODE_ON_VALUES = (MODE_ON, BIT_ON, "1", 1, True)
 
 MODE_AIRCLEAN_OFF = "@AC_MAIN_AIRCLEAN_OFF_W"
 MODE_AIRCLEAN_ON = "@AC_MAIN_AIRCLEAN_ON_W"
@@ -750,6 +757,34 @@ class AirConditionerDevice(Device):
         mode = self.model_info.enum_value(keys[2], mode_key)
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
 
+    def _get_on_off_mode_value(self, key: str, status: bool):
+        """Return a model value for generic ON/OFF modes."""
+        modes = MODE_ON_VALUES if status else MODE_OFF_VALUES
+        for mode in modes:
+            try:
+                value = self.model_info.enum_value(key, mode)
+            except ValueError:
+                continue
+            if value is not None:
+                return value
+        if self.model_info.value_type(key) == TYPE_BOOL:
+            return "1" if status else "0"
+        return None
+
+    async def set_mode_auto_dry(self, status: bool):
+        """Set the Auto Dry mode on or off."""
+        keys = self._get_cmd_keys(CMD_STATE_MODE_AUTO_DRY)
+        if (mode := self._get_on_off_mode_value(keys[2], status)) is None:
+            raise ValueError("Auto Dry mode not supported")
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
+    async def set_mode_uvnano(self, status: bool):
+        """Set the UVnano mode on or off."""
+        keys = self._get_cmd_keys(CMD_STATE_MODE_UVNANO)
+        if (mode := self._get_on_off_mode_value(keys[2], status)) is None:
+            raise ValueError("UVnano mode not supported")
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
     async def set_mode_jet(self, status: bool):
         """Set the Jet mode on or off."""
         if self.supported_mode_jet == JetModeSupport.NONE:
@@ -1189,6 +1224,15 @@ class AirConditionerStatus(DeviceStatus):
         return self._update_feature(AirConditionerFeatures.MODE_AIRCLEAN, status, False)
 
     @property
+    def mode_auto_dry(self):
+        """Return Auto Dry mode status."""
+        if (status := self._lookup_on_off_mode(STATE_MODE_AUTO_DRY)) is None:
+            return None
+        return self._update_feature(
+            AirConditionerFeatures.MODE_AUTO_DRY, status, False
+        )
+
+    @property
     def mode_jet(self):
         """Return Jet Mode status."""
         if self._device.supported_mode_jet == JetModeSupport.NONE:
@@ -1213,6 +1257,33 @@ class AirConditionerStatus(DeviceStatus):
         return self._update_feature(
             AirConditionerFeatures.LIGHTING_DISPLAY, value in supp_modes[MODE_ON], False
         )
+
+    @property
+    def mode_uvnano(self):
+        """Return UVnano mode status."""
+        if (status := self._lookup_on_off_mode(STATE_MODE_UVNANO)) is None:
+            return None
+        return self._update_feature(
+            AirConditionerFeatures.MODE_UVNANO, status, False
+        )
+
+    def _lookup_on_off_mode(self, state_key: list[str]) -> bool | None:
+        """Return a generic ON/OFF status."""
+        key = self._get_state_key(state_key)
+        try:
+            value = self.lookup_enum(key, True)
+        except (TypeError, ValueError):
+            value = None
+        if value is None:
+            curr_key = self._get_data_key(key)
+            if not curr_key:
+                return None
+            value = self._data[curr_key]
+        if value in MODE_ON_VALUES:
+            return True
+        if value in MODE_OFF_VALUES:
+            return False
+        return False
 
     @property
     def filters_life(self):
@@ -1397,7 +1468,9 @@ class AirConditionerStatus(DeviceStatus):
             self.pm25,
             self.pm1,
             self.mode_airclean,
+            self.mode_auto_dry,
             self.mode_jet,
+            self.mode_uvnano,
             self.lighting_display,
             self.water_in_current_temp,
             self.water_out_current_temp,

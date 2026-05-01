@@ -98,6 +98,14 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         turn_off_fn=lambda x: x.device.set_mode_airclean(False),
         turn_on_fn=lambda x: x.device.set_mode_airclean(True),
     ),
+    # Version: 0.42.0-phase2; created: 2026-04-30 21:58 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.MODE_AUTO_DRY,
+        name="Auto dry",
+        icon="mdi:water-percent-alert",
+        turn_off_fn=lambda x: x.device.set_mode_auto_dry(False),
+        turn_on_fn=lambda x: x.device.set_mode_auto_dry(True),
+    ),
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_JET,
         name="Jet mode",
@@ -112,6 +120,13 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         icon="mdi:wall-sconce-round",
         turn_off_fn=lambda x: x.device.set_lighting_display(False),
         turn_on_fn=lambda x: x.device.set_lighting_display(True),
+    ),
+    ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.MODE_UVNANO,
+        name="UVnano",
+        icon="mdi:lightbulb-fluorescent-tube-outline",
+        turn_off_fn=lambda x: x.device.set_mode_uvnano(False),
+        turn_on_fn=lambda x: x.device.set_mode_uvnano(True),
     ),
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_AWHP_SILENT,
