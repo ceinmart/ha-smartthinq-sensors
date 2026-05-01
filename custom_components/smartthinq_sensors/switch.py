@@ -98,6 +98,15 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         turn_off_fn=lambda x: x.device.set_mode_airclean(False),
         turn_on_fn=lambda x: x.device.set_mode_airclean(True),
     ),
+    # Version: 0.42.0-phase3; created: 2026-04-30 22:33 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.MODE_ANTI_BUGS,
+        name="Anti bugs",
+        icon="mdi:bug-outline",
+        entity_registry_enabled_default=False,
+        turn_off_fn=lambda x: x.device.set_mode_anti_bugs(False),
+        turn_on_fn=lambda x: x.device.set_mode_anti_bugs(True),
+    ),
     # Version: 0.42.0-phase2; created: 2026-04-30 21:58 -03:00; author: Codex; project: ha-smartthinq-sensors.
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_AUTO_DRY,
@@ -113,6 +122,14 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         turn_off_fn=lambda x: x.device.set_mode_jet(False),
         turn_on_fn=lambda x: x.device.set_mode_jet(True),
         available_fn=lambda x: x.device.is_mode_jet_available,
+    ),
+    ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.MODE_LOW_HEATING,
+        name="Low heating",
+        icon="mdi:radiator",
+        entity_registry_enabled_default=False,
+        turn_off_fn=lambda x: x.device.set_mode_low_heating(False),
+        turn_on_fn=lambda x: x.device.set_mode_low_heating(True),
     ),
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.LIGHTING_DISPLAY,

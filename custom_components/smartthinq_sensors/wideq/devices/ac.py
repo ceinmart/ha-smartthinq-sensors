@@ -22,6 +22,7 @@ SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
 SUPPORT_DUCT_ZONE = ["SupportDuctZoneType", "support.airState.ductZone.type"]
 SUPPORT_LIGHT = ["SupportLight", "support.light"]
 SUPPORT_PAC_MODE = ["SupportPACMode", "support.pacMode"]
+SUPPORT_PAC_MODE_EXT = ["SupportPACModeExt", "support.pacModeExt"]
 SUPPORT_RAC_MODE = ["SupportRACMode", "support.racMode"]
 SUPPORT_RAC_SUBMODE = ["SupportRACSubMode", "support.racSubMode"]
 
@@ -35,6 +36,8 @@ SUPPORT_VANE_VSWING = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_DIRECTION_SWING_UP_DO
 SUPPORT_JET_COOL = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_COOL_JET_W"]
 SUPPORT_JET_HEAT = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_HEAT_JET_W"]
 SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
+SUPPORT_AUTO_DRY = [SUPPORT_RAC_MODE, "@AUTODRY"]
+SUPPORT_UVNANO = [SUPPORT_PAC_MODE_EXT, "@UV_NANO"]
 SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, ["@HOTWATER", "@HOTWATER_ONLY"]]
 SUPPORT_LIGHT_SWITCH = [SUPPORT_LIGHT, "@RAC_88_DISPLAY_CONTROL"]
 SUPPORT_LIGHT_INV_SWITCH = [SUPPORT_LIGHT, "@BRIGHTNESS_CONTROL"]
@@ -72,9 +75,12 @@ STATE_DUCT_ZONE = ["ZoneControl", "airState.ductZone.state"]
 STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
+# Version: 0.42.0-phase3; created: 2026-04-30 22:33 -03:00; author: Codex; project: ha-smartthinq-sensors.
+STATE_MODE_ANTI_BUGS = ["AntiBugs", "airState.miscFuncState.antiBugs"]
 # Version: 0.42.0-phase2; created: 2026-04-30 21:58 -03:00; author: Codex; project: ha-smartthinq-sensors.
 STATE_MODE_AUTO_DRY = ["AutoDry", "airState.miscFuncState.autoDry"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
+STATE_MODE_LOW_HEATING = ["LowHeating", "airState.wMode.lowHeating"]
 STATE_MODE_UVNANO = ["Uvnano", "airState.miscFuncState.Uvnano"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
 STATE_AIRSENSORMON = ["SensorMon", "airState.quality.sensorMon"]
@@ -106,8 +112,10 @@ CMD_STATE_WDIR_HSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_HSWING]
 CMD_STATE_WDIR_VSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSWING]
 CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.control"]]
 CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
+CMD_STATE_MODE_ANTI_BUGS = [CTRL_BASIC, "Set", STATE_MODE_ANTI_BUGS]
 CMD_STATE_MODE_AUTO_DRY = [CTRL_BASIC, "Set", STATE_MODE_AUTO_DRY]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
+CMD_STATE_MODE_LOW_HEATING = [CTRL_BASIC, "Set", STATE_MODE_LOW_HEATING]
 CMD_STATE_MODE_UVNANO = [CTRL_BASIC, "Set", STATE_MODE_UVNANO]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
@@ -596,6 +604,17 @@ class AirConditionerDevice(Device):
         """Return if AirClean mode is supported."""
         return self._is_mode_supported(SUPPORT_AIRCLEAN)
 
+    # Version: 0.42.0-phase3; created: 2026-05-01 00:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    @cached_property
+    def is_mode_auto_dry_supported(self):
+        """Return if Auto Dry mode is supported."""
+        return self._is_mode_supported(SUPPORT_AUTO_DRY)
+
+    @cached_property
+    def is_mode_uvnano_supported(self):
+        """Return if UVnano mode is supported."""
+        return self._is_mode_supported(SUPPORT_UVNANO)
+
     @cached_property
     def supported_ligth_modes(self):
         """Return light switch modes supported."""
@@ -771,15 +790,34 @@ class AirConditionerDevice(Device):
             return "1" if status else "0"
         return None
 
+    # Version: 0.42.0-phase3; created: 2026-04-30 22:33 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    async def set_mode_anti_bugs(self, status: bool):
+        """Set the AntiBugs mode on or off."""
+        keys = self._get_cmd_keys(CMD_STATE_MODE_ANTI_BUGS)
+        if (mode := self._get_on_off_mode_value(keys[2], status)) is None:
+            raise ValueError("AntiBugs mode not supported")
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
     async def set_mode_auto_dry(self, status: bool):
         """Set the Auto Dry mode on or off."""
+        if not self.is_mode_auto_dry_supported:
+            raise ValueError("Auto Dry mode not supported")
         keys = self._get_cmd_keys(CMD_STATE_MODE_AUTO_DRY)
         if (mode := self._get_on_off_mode_value(keys[2], status)) is None:
             raise ValueError("Auto Dry mode not supported")
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
 
+    async def set_mode_low_heating(self, status: bool):
+        """Set the Low Heating mode on or off."""
+        keys = self._get_cmd_keys(CMD_STATE_MODE_LOW_HEATING)
+        if (mode := self._get_on_off_mode_value(keys[2], status)) is None:
+            raise ValueError("Low Heating mode not supported")
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
     async def set_mode_uvnano(self, status: bool):
         """Set the UVnano mode on or off."""
+        if not self.is_mode_uvnano_supported:
+            raise ValueError("UVnano mode not supported")
         keys = self._get_cmd_keys(CMD_STATE_MODE_UVNANO)
         if (mode := self._get_on_off_mode_value(keys[2], status)) is None:
             raise ValueError("UVnano mode not supported")
@@ -1223,9 +1261,21 @@ class AirConditionerStatus(DeviceStatus):
         status = value == MODE_AIRCLEAN_ON
         return self._update_feature(AirConditionerFeatures.MODE_AIRCLEAN, status, False)
 
+    # Version: 0.42.0-phase3; created: 2026-04-30 22:33 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    @property
+    def mode_anti_bugs(self):
+        """Return AntiBugs mode status."""
+        if (status := self._lookup_on_off_mode(STATE_MODE_ANTI_BUGS)) is None:
+            return None
+        return self._update_feature(
+            AirConditionerFeatures.MODE_ANTI_BUGS, status, False
+        )
+
     @property
     def mode_auto_dry(self):
         """Return Auto Dry mode status."""
+        if not self._device.is_mode_auto_dry_supported:
+            return None
         if (status := self._lookup_on_off_mode(STATE_MODE_AUTO_DRY)) is None:
             return None
         return self._update_feature(
@@ -1247,6 +1297,15 @@ class AirConditionerStatus(DeviceStatus):
         return self._update_feature(AirConditionerFeatures.MODE_JET, status, False)
 
     @property
+    def mode_low_heating(self):
+        """Return Low Heating mode status."""
+        if (status := self._lookup_on_off_mode(STATE_MODE_LOW_HEATING)) is None:
+            return None
+        return self._update_feature(
+            AirConditionerFeatures.MODE_LOW_HEATING, status, False
+        )
+
+    @property
     def lighting_display(self):
         """Return display lighting status."""
         if not (supp_modes := self._device.supported_ligth_modes):
@@ -1261,6 +1320,8 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def mode_uvnano(self):
         """Return UVnano mode status."""
+        if not self._device.is_mode_uvnano_supported:
+            return None
         if (status := self._lookup_on_off_mode(STATE_MODE_UVNANO)) is None:
             return None
         return self._update_feature(
@@ -1468,8 +1529,10 @@ class AirConditionerStatus(DeviceStatus):
             self.pm25,
             self.pm1,
             self.mode_airclean,
+            self.mode_anti_bugs,
             self.mode_auto_dry,
             self.mode_jet,
+            self.mode_low_heating,
             self.mode_uvnano,
             self.lighting_display,
             self.water_in_current_temp,
