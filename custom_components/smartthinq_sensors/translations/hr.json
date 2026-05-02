@@ -35,5 +35,29 @@
       }
     },
     "title": "SmartThinQ LGE Senzoris"
+  },
+  "entity": {
+    "switch": {
+      "mode_anti_bugs": {
+        "name": "Zaštita od komaraca"
+      },
+      "mode_auto_dry": {
+        "name": "Automatsko sušenje"
+      },
+      "mode_low_heating": {
+        "name": "Nisko grijanje"
+      },
+      "mode_power_save": {
+        "name": "Ušteda energije"
+      },
+      "mode_uvnano": {
+        "name": "UVnano"
+      }
+    },
+    "select": {
+      "energy_control": {
+        "name": "Kontrola energije"
+      }
+    }
   }
 }

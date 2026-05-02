@@ -101,7 +101,7 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     # Version: 0.42.0-phase3; created: 2026-04-30 22:33 -03:00; author: Codex; project: ha-smartthinq-sensors.
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_ANTI_BUGS,
-        name="Anti bugs",
+        translation_key=AirConditionerFeatures.MODE_ANTI_BUGS,
         icon="mdi:bug-outline",
         entity_registry_enabled_default=False,
         turn_off_fn=lambda x: x.device.set_mode_anti_bugs(False),
@@ -110,7 +110,7 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     # Version: 0.42.0-phase2; created: 2026-04-30 21:58 -03:00; author: Codex; project: ha-smartthinq-sensors.
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_AUTO_DRY,
-        name="Auto dry",
+        translation_key=AirConditionerFeatures.MODE_AUTO_DRY,
         icon="mdi:water-percent-alert",
         turn_off_fn=lambda x: x.device.set_mode_auto_dry(False),
         turn_on_fn=lambda x: x.device.set_mode_auto_dry(True),
@@ -125,7 +125,7 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     ),
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_LOW_HEATING,
-        name="Low heating",
+        translation_key=AirConditionerFeatures.MODE_LOW_HEATING,
         icon="mdi:radiator",
         entity_registry_enabled_default=False,
         turn_off_fn=lambda x: x.device.set_mode_low_heating(False),
@@ -134,7 +134,7 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     # Version: 0.42.0-phase4; created: 2026-05-01 16:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_POWER_SAVE,
-        name="Power save",
+        translation_key=AirConditionerFeatures.MODE_POWER_SAVE,
         icon="mdi:leaf",
         entity_registry_enabled_default=False,
         turn_off_fn=lambda x: x.device.set_mode_power_save(False),
@@ -150,7 +150,7 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     ),
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_UVNANO,
-        name="UVnano",
+        translation_key=AirConditionerFeatures.MODE_UVNANO,
         icon="mdi:lightbulb-fluorescent-tube-outline",
         turn_off_fn=lambda x: x.device.set_mode_uvnano(False),
         turn_on_fn=lambda x: x.device.set_mode_uvnano(True),

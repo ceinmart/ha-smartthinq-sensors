@@ -48,5 +48,29 @@
       }
     },
     "title": "SmartThinQ LGE Αισθητήρες"
+  },
+  "entity": {
+    "switch": {
+      "mode_anti_bugs": {
+        "name": "Απωθητικό κουνουπιών"
+      },
+      "mode_auto_dry": {
+        "name": "Αυτόματη αφύγρανση"
+      },
+      "mode_low_heating": {
+        "name": "Χαμηλή θέρμανση"
+      },
+      "mode_power_save": {
+        "name": "Εξοικονόμηση ενέργειας"
+      },
+      "mode_uvnano": {
+        "name": "UVnano"
+      }
+    },
+    "select": {
+      "energy_control": {
+        "name": "Έλεγχος ενέργειας"
+      }
+    }
   }
 }

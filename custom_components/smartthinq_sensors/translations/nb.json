@@ -35,5 +35,29 @@
       }
     },
     "title": "SmartThinQ LGE-sensorer"
+  },
+  "entity": {
+    "switch": {
+      "mode_anti_bugs": {
+        "name": "Myggbeskyttelse"
+      },
+      "mode_auto_dry": {
+        "name": "Automatisk tørking"
+      },
+      "mode_low_heating": {
+        "name": "Lav oppvarming"
+      },
+      "mode_power_save": {
+        "name": "Strømsparing"
+      },
+      "mode_uvnano": {
+        "name": "UVnano"
+      }
+    },
+    "select": {
+      "energy_control": {
+        "name": "Energikontroll"
+      }
+    }
   }
 }

@@ -56,5 +56,29 @@
       }
     },
     "title": "SmartThinQ LGE Sensors"
+  },
+  "entity": {
+    "switch": {
+      "mode_anti_bugs": {
+        "name": "Anti bugs"
+      },
+      "mode_auto_dry": {
+        "name": "Auto dry"
+      },
+      "mode_low_heating": {
+        "name": "Low heating"
+      },
+      "mode_power_save": {
+        "name": "Power save"
+      },
+      "mode_uvnano": {
+        "name": "UVnano"
+      }
+    },
+    "select": {
+      "energy_control": {
+        "name": "Energy control"
+      }
+    }
   }
 }

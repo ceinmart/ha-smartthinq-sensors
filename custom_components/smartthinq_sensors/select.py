@@ -77,7 +77,7 @@ MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
 AC_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
     ThinQSelectEntityDescription(
         key=AirConditionerFeatures.ENERGY_CONTROL,
-        name="Energy control",
+        translation_key=AirConditionerFeatures.ENERGY_CONTROL,
         icon="mdi:transmission-tower-export",
         entity_registry_enabled_default=False,
         options_fn=lambda x: x.device.energy_control_modes,
