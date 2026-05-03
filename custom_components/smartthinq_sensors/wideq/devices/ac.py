@@ -283,6 +283,8 @@ class JetMode(Enum):
     HEAT = "@HEAT_JET"
     DRY = "@DRY_JET_W"
     HIMALAYAS = "@HIMALAYAS_COOL"
+    FAN = "@FAN_JET"
+    AUTO = "@AUTO_MODE_JET"
 
 
 class JetModeSupport(Enum):
@@ -666,6 +668,36 @@ class AirConditionerDevice(Device):
             ]
         return []
 
+    # Version: 0.42.0-phase5.
+    # Created: 2026-05-01 21:26 -03:00 by Codex.
+    # Project: ha-smartthinq-sensors.
+    @cached_property
+    def jet_modes(self) -> list[str]:
+        """Return advanced Jet mode options when the model exposes variants."""
+        key = self._get_state_key(STATE_MODE_JET)
+        if not (values := self.model_info.value(key, [TYPE_ENUM])):
+            return []
+
+        modes = []
+        for value in dict.fromkeys(values.options.values()):
+            try:
+                mode = JetMode(value)
+            except ValueError:
+                continue
+            modes.append(mode.name)
+
+        useful_modes = [mode for mode in modes if mode != JetMode.OFF.name]
+        if len(useful_modes) <= 2:
+            return []
+        return modes
+
+    @property
+    def is_jet_mode_select_available(self):
+        """Return if advanced Jet mode select can be changed now."""
+        if not self.jet_modes:
+            return False
+        return bool(self._status and self._status.is_on)
+
     @property
     def is_energy_saving_available(self):
         """Return if energy-saving controls are available for the current state."""
@@ -909,6 +941,22 @@ class AirConditionerDevice(Device):
         else:
             value = mode
         await self.set(keys[0], keys[1], key=key, value=value)
+
+    # Version: 0.42.0-phase5.
+    # Created: 2026-05-01 21:26 -03:00 by Codex.
+    # Project: ha-smartthinq-sensors.
+    async def set_jet_mode(self, mode: str):
+        """Set the advanced Jet mode variant."""
+        if mode not in self.jet_modes:
+            raise ValueError(f"Invalid jet mode: {mode}")
+        if mode != JetMode.OFF.name and not self.is_jet_mode_select_available:
+            raise ValueError("Jet mode is not available")
+
+        keys = self._get_cmd_keys(CMD_STATE_MODE_JET)
+        jet = self.model_info.enum_value(keys[2], JetMode[mode].value)
+        if jet is None:
+            raise ValueError(f"Invalid jet mode: {mode}")
+        await self.set(keys[0], keys[1], key=keys[2], value=jet)
 
     async def set_mode_jet(self, status: bool):
         """Set the Jet mode on or off."""
@@ -1408,6 +1456,23 @@ class AirConditionerStatus(DeviceStatus):
             status = False
         return self._update_feature(AirConditionerFeatures.MODE_JET, status, False)
 
+    # Version: 0.42.0-phase5.
+    # Created: 2026-05-01 21:26 -03:00 by Codex.
+    # Project: ha-smartthinq-sensors.
+    @property
+    def jet_mode(self):
+        """Return advanced Jet Mode variant."""
+        if not self._device.jet_modes:
+            return None
+        key = self._get_state_key(STATE_MODE_JET)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
+        try:
+            status = JetMode(value).name
+        except ValueError:
+            return None
+        return self._update_feature(AirConditionerFeatures.JET_MODE, status, False)
+
     @property
     def mode_low_heating(self):
         """Return Low Heating mode status."""
@@ -1664,6 +1729,7 @@ class AirConditionerStatus(DeviceStatus):
             self.mode_anti_bugs,
             self.mode_auto_dry,
             self.mode_jet,
+            self.jet_mode,
             self.mode_low_heating,
             self.mode_uvnano,
             self.lighting_display,

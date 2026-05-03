@@ -84,6 +84,18 @@ AC_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
         select_option_fn=lambda x, option: x.device.set_energy_control(option),
         available_fn=lambda x: x.device.is_energy_saving_available,
     ),
+    # Version: 0.42.0-phase5.
+    # Created: 2026-05-01 21:26 -03:00 by Codex.
+    # Project: ha-smartthinq-sensors.
+    ThinQSelectEntityDescription(
+        key=AirConditionerFeatures.JET_MODE,
+        name="Jet mode",
+        icon="mdi:turbine",
+        entity_registry_enabled_default=False,
+        options_fn=lambda x: x.device.jet_modes,
+        select_option_fn=lambda x, option: x.device.set_jet_mode(option),
+        available_fn=lambda x: x.device.is_jet_mode_select_available,
+    ),
 )
 
 SELECT_ENTITIES = {

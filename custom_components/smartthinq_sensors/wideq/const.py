@@ -41,6 +41,10 @@ class AirConditionerFeatures(StrEnum):
     FILTER_MAIN_USE = "filter_main_use"
     LIGHTING_DISPLAY = "lighting_display"
     MODE_AIRCLEAN = "mode_airclean"
+    # Version: 0.42.0-phase5.
+    # Created: 2026-05-01 21:26 -03:00 by Codex.
+    # Project: ha-smartthinq-sensors.
+    JET_MODE = "jet_mode"
     # Version: 0.42.0-phase3; created: 2026-04-30 22:33 -03:00; author: Codex; project: ha-smartthinq-sensors.
     MODE_ANTI_BUGS = "mode_anti_bugs"
     # Version: 0.42.0-phase2; created: 2026-04-30 21:58 -03:00; author: Codex; project: ha-smartthinq-sensors.
