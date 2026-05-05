@@ -84,6 +84,15 @@ AC_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
         select_option_fn=lambda x, option: x.device.set_energy_control(option),
         available_fn=lambda x: x.device.is_energy_saving_available,
     ),
+    # Version: 0.42.0-phase6; created: 2026-05-03 20:54 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    ThinQSelectEntityDescription(
+        key=AirConditionerFeatures.BUZZER_VOLUME,
+        name="Buzzer volume",
+        icon="mdi:volume-source",
+        entity_category=EntityCategory.CONFIG,
+        options_fn=lambda x: x.device.buzzer_volume_modes,
+        select_option_fn=lambda x, option: x.device.set_buzzer_volume(option),
+    ),
     # Version: 0.42.0-phase5.
     # Created: 2026-05-01 21:26 -03:00 by Codex.
     # Project: ha-smartthinq-sensors.

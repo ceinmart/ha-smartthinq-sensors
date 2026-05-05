@@ -141,6 +141,15 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         turn_on_fn=lambda x: x.device.set_mode_power_save(True),
         available_fn=lambda x: x.device.is_energy_saving_available,
     ),
+    # Version: 0.42.0-phase6; created: 2026-05-03 20:54 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.SOUND,
+        name="Sound",
+        icon="mdi:volume-high",
+        entity_category=EntityCategory.CONFIG,
+        turn_off_fn=lambda x: x.device.set_sound(False),
+        turn_on_fn=lambda x: x.device.set_sound(True),
+    ),
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.LIGHTING_DISPLAY,
         name="Display light",

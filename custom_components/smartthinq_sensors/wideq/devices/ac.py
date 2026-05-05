@@ -86,6 +86,8 @@ STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
 STATE_MODE_LOW_HEATING = ["LowHeating", "airState.wMode.lowHeating"]
 STATE_MODE_UVNANO = ["Uvnano", "airState.miscFuncState.Uvnano"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
+# Version: 0.42.0-phase6; created: 2026-05-03 20:54 -03:00; author: Codex; project: ha-smartthinq-sensors.
+STATE_BELL_SOUND = ["BellSound", "airState.bellSound.control"]
 STATE_AIRSENSORMON = ["SensorMon", "airState.quality.sensorMon"]
 STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
 STATE_PM10 = ["SensorPM10", "airState.quality.PM10"]
@@ -123,6 +125,8 @@ CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
 CMD_STATE_MODE_LOW_HEATING = [CTRL_BASIC, "Set", STATE_MODE_LOW_HEATING]
 CMD_STATE_MODE_UVNANO = [CTRL_BASIC, "Set", STATE_MODE_UVNANO]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
+# Version: 0.42.0-phase6; created: 2026-05-03 20:54 -03:00; author: Codex; project: ha-smartthinq-sensors.
+CMD_STATE_BELL_SOUND = [CTRL_BASIC, "Set", STATE_BELL_SOUND]
 CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
 
 # AWHP Section
@@ -171,6 +175,8 @@ MODE_ON_VALUES = (MODE_ON, BIT_ON, "1", 1, True)
 
 MODE_AIRCLEAN_OFF = "@AC_MAIN_AIRCLEAN_OFF_W"
 MODE_AIRCLEAN_ON = "@AC_MAIN_AIRCLEAN_ON_W"
+MODE_BUZZER_OFF = "@BUZZER_OFF"
+MODE_BUZZER_ON = "@BUZZER_ON"
 
 AWHP_MODE_AIR = "@AIR"
 AWHP_MODE_WATER = "@WATER"
@@ -644,6 +650,32 @@ class AirConditionerDevice(Device):
         """Return if Power Save mode has a model-backed ON/OFF mapping."""
         return self._is_on_off_state_supported(STATE_POWER_SAVE)
 
+    # Version: 0.42.0-phase6; created: 2026-05-03 20:54 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    @cached_property
+    def is_sound_supported(self):
+        """Return if sound control has a model-backed ON/OFF command."""
+        key = self._get_state_key(STATE_BELL_SOUND)
+        if values := self.model_info.value(key, [TYPE_ENUM]):
+            modes = set(values.options.values())
+            if MODE_BUZZER_ON in modes and MODE_BUZZER_OFF in modes:
+                return True
+        return self._is_on_off_state_supported(STATE_BELL_SOUND)
+
+    @cached_property
+    def buzzer_volume_modes(self) -> list[str]:
+        """Return available buzzer volume options when the model exposes levels."""
+        key = self._get_state_key(STATE_BELL_SOUND)
+        if not (values := self.model_info.value(key, [TYPE_ENUM])):
+            return []
+        modes = [
+            str(value)
+            for value in dict.fromkeys(values.options.values())
+            if value not in (None, "")
+        ]
+        if len(modes) <= 1:
+            return []
+        return modes
+
     @cached_property
     def energy_control_modes(self) -> list[str]:
         """Return available Active Energy Control options."""
@@ -880,6 +912,13 @@ class AirConditionerDevice(Device):
             return "1" if status else "0"
         return None
 
+    def _get_sound_mode_value(self, key: str, status: bool):
+        """Return a model value for buzzer ON/OFF modes."""
+        mode_key = MODE_BUZZER_ON if status else MODE_BUZZER_OFF
+        if (mode := self.model_info.enum_value(key, mode_key)) is not None:
+            return mode
+        return self._get_on_off_mode_value(key, status)
+
     # Version: 0.42.0-phase3; created: 2026-04-30 22:33 -03:00; author: Codex; project: ha-smartthinq-sensors.
     async def set_mode_anti_bugs(self, status: bool):
         """Set the AntiBugs mode on or off."""
@@ -941,6 +980,26 @@ class AirConditionerDevice(Device):
         else:
             value = mode
         await self.set(keys[0], keys[1], key=key, value=value)
+
+    # Version: 0.42.0-phase6; created: 2026-05-03 20:54 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    async def set_sound(self, status: bool):
+        """Set the indoor unit sound on or off."""
+        if not self.is_sound_supported:
+            raise ValueError("Sound control not supported")
+        keys = self._get_cmd_keys(CMD_STATE_BELL_SOUND)
+        if (mode := self._get_sound_mode_value(keys[2], status)) is None:
+            raise ValueError("Sound control not supported")
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
+    async def set_buzzer_volume(self, mode: str):
+        """Set the indoor unit buzzer volume."""
+        if mode not in self.buzzer_volume_modes:
+            raise ValueError(f"Invalid buzzer volume: {mode}")
+        keys = self._get_cmd_keys(CMD_STATE_BELL_SOUND)
+        value = self.model_info.enum_value(keys[2], mode)
+        if value is None:
+            raise ValueError(f"Invalid buzzer volume: {mode}")
+        await self.set(keys[0], keys[1], key=keys[2], value=value)
 
     # Version: 0.42.0-phase5.
     # Created: 2026-05-01 21:26 -03:00 by Codex.
@@ -1396,6 +1455,51 @@ class AirConditionerStatus(DeviceStatus):
             AirConditionerFeatures.ENERGY_CONTROL, status, False
         )
 
+    # Version: 0.42.0-phase6; created: 2026-05-03 20:54 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    @property
+    def sound(self):
+        """Return indoor unit sound status."""
+        if not self._device.is_sound_supported:
+            return None
+        if self._device.buzzer_volume_modes:
+            return None
+        status = self._lookup_sound_on_off_mode(STATE_BELL_SOUND)
+        if status is None:
+            return None
+        return self._update_feature(AirConditionerFeatures.SOUND, status, False)
+
+    @property
+    def buzzer_volume(self):
+        """Return indoor unit buzzer volume."""
+        if not self._device.buzzer_volume_modes:
+            return None
+        status = self._lookup_enum_or_range(STATE_BELL_SOUND)
+        if status is None:
+            return None
+        if status not in self._device.buzzer_volume_modes:
+            return None
+        return self._update_feature(
+            AirConditionerFeatures.BUZZER_VOLUME, status, False
+        )
+
+    def _lookup_sound_on_off_mode(self, state_key: list[str]) -> bool | None:
+        """Return buzzer ON/OFF status."""
+        key = self._get_state_key(state_key)
+        try:
+            value = self.lookup_enum(key, True)
+        except (TypeError, ValueError):
+            value = None
+        if value is None:
+            curr_key = self._get_data_key(key)
+            if not curr_key:
+                return None
+            value = self._data[curr_key]
+        if value in (MODE_BUZZER_ON, *MODE_ON_VALUES):
+            return True
+        if value in (MODE_BUZZER_OFF, *MODE_OFF_VALUES):
+            return False
+        return None
+
     @property
     def humidity(self):
         """Return current humidity."""
@@ -1720,6 +1824,8 @@ class AirConditionerStatus(DeviceStatus):
             self.energy_current,
             self.mode_power_save,
             self.energy_control,
+            self.sound,
+            self.buzzer_volume,
             self.filters_life,
             self.humidity,
             self.pm10,

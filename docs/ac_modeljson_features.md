@@ -52,7 +52,7 @@ change.
 | `airState.miscFuncState.antiBugs` | Likely `@ON` / `@OFF` or `1` / `0`; support marker not confirmed | Mosquito-repellent mode | Anti mosquito | `switch.<device>_anti_bugs` | Medium/Low until support marker is found | Implemented in Phase 3 as disabled-by-default experimental switch |
 | `airState.wMode.lowHeating` | Likely `@ON` / `@OFF` or `1` / `0`; support marker not confirmed | Low heating / minimum heat protection | Low heating | `switch.<device>_low_heating` | Medium/Low until support marker is found | Implemented in Phase 3 as disabled-by-default experimental switch |
 | `airState.powerSave.basic` | Boolean or level; requires model validation | Power save / reduced consumption mode | Energy saving | `switch.<device>_power_save` if boolean | High function match; Medium value model | Implemented in Phase 4 as disabled-by-default switch when the model has an ON/OFF mapping |
-| `airState.bellSound.control` | Boolean or volume enum; requires model validation | Buzzer / button sound control | Sound / beep setting | `switch.<device>_sound` if on/off; `select.<device>_buzzer_volume` if volume enum | Medium | Documented only |
+| `airState.bellSound.control` | Boolean/ON-OFF mapping or volume enum; requires model validation | Buzzer / button sound control | Sound / beep setting | `switch.<device>_sound` if on/off; `select.<device>_buzzer_volume` if volume enum | Medium | Implemented in Phase 6 as config entity |
 
 ## Medium-priority candidates
 
@@ -138,6 +138,20 @@ Phase 3 added `Anti bugs` and `Low heating` as experimental switches.
   reliable `support.*` marker has been identified yet.
 - Until a marker is found or physical/app testing confirms support, these
   entities should remain disabled by default.
+
+## Phase 6 validation notes
+
+Phase 6 added conservative sound/buzzer config entities for AC devices.
+
+- `Sound`: created as an enabled config switch only when
+  `airState.bellSound.control` has a model-backed ON/OFF command and the
+  current state is present in polling.
+- `Buzzer volume`: created as an enabled config select only when the same field
+  is enum-like, exposes more than ON/OFF values, and the current state is
+  present in polling.
+- No `support.*` marker has been confirmed for sound/buzzer. Models that list
+  `airState.bellSound.*` only in `model_info` but do not report it in
+  `device_status` remain unsupported for now.
 
 ## Next steps
 

@@ -32,6 +32,8 @@ class AirConditionerFeatures(StrEnum):
     """Features for LG Air Conditioner devices."""
 
     # Version: 0.42.0-phase4; created: 2026-05-01 16:00 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    # Version: 0.42.0-phase6; created: 2026-05-03 20:54 -03:00; author: Codex; project: ha-smartthinq-sensors.
+    BUZZER_VOLUME = "buzzer_volume"
     ENERGY_CONTROL = "energy_control"
     ENERGY_CURRENT = "energy_current"
     HOT_WATER_TEMP = "hot_water_temperature"
@@ -59,6 +61,7 @@ class AirConditionerFeatures(StrEnum):
     PM25 = "pm25"
     RESERVATION_SLEEP_TIME = "reservation_sleep_time"
     ROOM_TEMP = "room_temperature"
+    SOUND = "sound"
     WATER_IN_TEMP = "water_in_temperature"
     WATER_OUT_TEMP = "water_out_temperature"
 
